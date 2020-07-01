@@ -1,0 +1,262 @@
+---
+title: "CW2_13128128_N_Katz.rmd"
+author: "Nuchem Katz"
+date: "6 January 2019"
+program: "BSc computing"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+
+1 Decision trees 
+```{r }
+knitr::include_graphics('./treeScatch.jpg')
+
+```
+
+
+2. Regression Trees 
+
+a) and b)
+```{r}
+library(ISLR)
+data(Carseats) 
+head(Carseats)
+library(tree)
+nrow(Carseats)
+set.seed(7)
+carseat.train<-sample(1:nrow(Carseats),200)
+carseat.test<-Carseats[-carseat.train,]
+
+#creating tree
+tree.carseat.train<- tree(Carseats$Sales ~ .,Carseats, subset=carseat.train)
+View(Carseats)
+summary(tree.carseat.train)
+plot(tree.carseat.train)
+text(tree.carseat.train, pretty=0)
+
+
+#calculating MSE for unpruned tree
+carseat.yhat<-predict(tree.carseat.train, newdata = Carseats[-carseat.train,])
+carseat.test.trueSales<-Carseats[-carseat.train,"Sales"]
+print(carseat.testMSE.sales.unpruned<-mean((carseat.yhat-carseat.test.trueSales)^2))
+sqrt(carseat.testMSE.sales.unpruned)
+
+#* The price and the quality of the shelving location where the carseats are sold 
+#(which I guess mean either how they're 'visually' presented to the customer, 
+#or the actual physical conditions under which they're kept/stored until sale)
+#- seem to be of biggest importance. 
+#* That if shelveLoc was good, advertising was not anymore a factor.
+#* That the highest sales were made when shelveloc was good, the price was more than a 100, 
+#community level was higher than 40.5K, but the competitors price was more than 130
+
+#21 terminal nodes. 6 predictors are used. 
+#The test MSE is  4.83821 and its square root  2.199593, 
+#which means that the model leads to a prediction which are within around 2.2K of the true sales of carseats at the 400 locations. 
+
+
+
+
+#c) calculating cv the check wether to prune
+set.seed(8)
+cv.tree.carseat.train<-cv.tree(tree.carseat.train)
+cv.tree.carseat.train
+prune.carseat.tree.train<-prune.tree(tree.carseat.train, best=21)
+summary(prune.carseat.tree.train)
+
+#calculating MSE for pruned tree
+pruned.carseat.yhat<-predict(prune.carseat.tree.train, newdata = Carseats[-carseat.train,])
+print(carseat.testMSE.sales.pruned<-mean((pruned.carseat.yhat-carseat.test.trueSales)^2))
+sqrt(carseat.testMSE.sales.pruned)
+
+#Pruning the tree isn't needed as the tree is already split on 21 terminal nodes, which according to the cv test produce the best MSE.
+
+#d) 
+library(MASS)
+library(randomForest) 
+set.seed(1)
+bag.sales.carseats<-randomForest(Sales~., data=Carseats, subset = carseat.train, mtry=10,  importance=TRUE)
+bag.sales.carseats
+#calculating MSE for bagging
+yhat.carseat.bagged<-predict(bag.sales.carseats, newdata = Carseats[-carseat.train,])
+print(carseat.testMSE.sales.bagged<-mean((yhat.carseat.bagged-carseat.test.trueSales)^2))
+sqrt(carseat.testMSE.sales.bagged)
+importance(bag.sales.carseats)
+#We do get a better MSE as an sqrt(MSE) of 1.630 is better than 2.200. Also, the Variance explained is 65.5
+# * The Var is best best explained when all 10 variables are considered for each split of the trees.
+# * importance() confirms that shelveloc and price carry the most importance, and they coincide for both, bagging and the following (random forest). 
+
+#d) calculate mse on mtry=10 floor 3
+rf3.bag.sales.carseats<-randomForest(Sales~., data=Carseats, subset = carseat.train, mtry=3,  importance=TRUE)
+rf.yhat.carseat.bagged<-predict(rf3.bag.sales.carseats, newdata = Carseats[-carseat.train,])
+print(carseat.testMSE.sales.bagged<-mean((rf.yhat.carseat.bagged-carseat.test.trueSales)^2))
+sqrt(carseat.testMSE.sales.bagged)
+importance(rf3.bag.sales.carseats)
+
+#calculate mse on mtry=10 ceiling-division 3
+rf4.bag.sales.carseats<-randomForest(Sales~., data=Carseats, subset = carseat.train, mtry=4,  importance=TRUE)
+rf.yhat.carseat.bagged<-predict(rf4.bag.sales.carseats, newdata = Carseats[-carseat.train,])
+print(rf.carseat.testMSE.sales.bagged<-mean((rf.yhat.carseat.bagged-carseat.test.trueSales)^2))
+sqrt(rf.carseat.testMSE.sales.bagged)
+importance(rf3.bag.sales.carseats)
+
+#This is not better than when all m is used, however using 4 is obviously bettern than using 3. 
+```
+3. Classification trees 
+
+```{r}
+
+#a)
+library(ISLR)
+library(tree)
+data(OJ)
+head(OJ)
+purchase01= as.factor(OJ$Purchase)
+OJ<-data.frame(OJ, purchase01)
+nrow(OJ)
+set.seed(7)
+oj.train<-sample(1:nrow(OJ),800)
+oj.test<-OJ[-oj.train,]
+nrow(oj.train)
+purchase01.test<-OJ$purchase01[-oj.train]
+
+#B)
+tree.oj<-tree(purchase01 ~.- Purchase, OJ, subset=oj.train)
+summary(tree.oj)
+#The tree has 8 terminal nodes. The training error rate is 18%. The loyalty, the price of the product and the diff in price
+#between the two products are what's important.
+
+#C) and d)
+tree.oj
+plot(tree.oj) 
+text(tree.oj, pretty=0) 
+#If loyalty to CH is more than 48%,  then the only way people would go for mm was if the the price difference is less than 17 cent (line no 24, upon getting a detailed text output). Else, if their loyalty is less, they'd always go for mm, no matter the difference in price. 
+# So as an example, interperting line 24, when typing the name of the tree to get detailed text output: For a loyalty score of less than 48%, if price of MM less of CH is less than 16.5 cent, based on 39 observations (with a smallest sum of squares for this node summed as 48.14 - though this has no meaning here since this is a classification and not regression tree), an 'MM purchase' is the overall prediction for this branch with a probebility of 69% . 
+
+#e)
+tree.pred.oj.test<-predict(tree.oj, oj.test, type ="class")
+table(tree.pred.oj.test, purchase01.test)
+print((18+21)/270)
+# Test error rate is 14%, bettern than before
+
+#f), g), h) and i)
+set.seed(3)
+cv.tree.oj<- cv.tree(tree.oj, FUN=prune.misclass)
+cv.tree.oj
+plot(cv.tree.oj$size,cv.tree.oj$dev,type='b') 
+
+prune.tree.oj <- prune.misclass(tree.oj,best=5)
+prune.tree.pred.oj.test<-predict(prune.tree.oj, oj.test, type ="class")
+table(prune.tree.pred.oj.test, purchase01.test)
+
+#cv shows that prunning the tree with 5 is best but when pruned, the error rates aren't actually make any difference 
+
+#j) and k)
+summary(prune.tree.oj)
+# the  training error for both are the same and the test error for both are the same
+```
+
+4 SVM    
+```{r}
+#a)
+
+library(e1071)
+library(ISLR)
+data(Auto)
+median(Auto$mpg)
+milAbvMedn<-c(ifelse(Auto$mpg<median(Auto$mpg),0,1))
+auto.dat<-data.frame(x=Auto,  y= as.factor(milAbvMedn))
+
+#b)
+#Cost=1
+svmfit.linear.higmil.c1 <- svm(y ~ ., data=auto.dat, kernel="linear",  cost=1)
+svmfit.linear.higmil.c1
+summary(svmfit.linear.higmil.c1)
+#There are 56 support vectotrs; 26 from side y=0 and 30 from side y=1. 
+
+#Cost=0.01
+svmfit.linear.higmil.c001 <- svm(y ~ ., data=auto.dat, kernel="linear",  cost=0.01)
+svmfit.linear.higmil.c001
+summary(svmfit.linear.higmil.c001)
+#There are 150 support vectotrs; 74 from side y=0 and 76 from side y=1, as smaller cost 
+#means many more support vectors involved in determining the margins (or hyperplanein this case). 
+
+#Cost=100,000
+svmfit.linear.higmil.c100000 <- svm(y ~ ., data=auto.dat, kernel="linear",  cost=1e5)
+svmfit.linear.higmil.c100000
+summary(svmfit.linear.higmil.c100000)
+#There are 35 support vectotrs; 21 from side y=0 and 14 from side y=1. 
+
+#Perform cross validation on different values of cost
+set.seed(9)
+tune.out.lin<-tune(svm, y ~., data = auto.dat, kernel="linear", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 100, 1000, 10000, 1e5)))
+summary(tune.out.lin)
+summary(tune.out.lin$best.model)
+#Best performence of the cv is a training error of 0.01282051  which is when cost = to 10^0 which is =1.
+#i.e. the best balance between having a high cost, narrow margins/fewer violations but high overfitting 
+#and therefor high variance vs lower cost, wide margins/more violations and more bias but a better generlized model 
+#with less variance each time it is applied.
+
+
+#c)
+set.seed(8)
+tune.out.poly<-tune(svm, y ~., data = auto.dat, kernel="polynomial", ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 100, 1000, 10000, 1e5)),gamma = c(0.5,1,2,3,4), degree=c(0,1,2,3,4,5))
+summary(tune.out.poly)
+summary(tune.out.poly$best.model)
+#Not good at all as  training error of 0.5305769  no matter which cost so clearly not good model. 
+
+
+
+set.seed(7)
+tune.out.radial <- tune(svm,y ~ .,data = auto.dat,  kernel = "radial", ranges = list(cost = c(0.1,1,10,100,1000), gamma = c(0.5,1,2,3,4)))
+summary(tune.out.radial)
+summary(tune.out.radial$best.model)
+#Also not as good as linear as error is training error is still biggger, 0.04057692, cost=10 and gamma=0.5.
+
+
+#d)
+plot(tune.out.lin$best.model, auto.dat, x.mpg~x.horsepower)
+tune.out.lin$best.model$index
+
+plot(tune.out.poly$best.model, auto.dat, x.mpg~x.horsepower)
+tune.out.poly$best.model$index
+
+plot(tune.out.radial$best.model, auto.dat, x.mpg~x.horsepower)
+tune.out.radial$best.model$index
+```
+
+
+
+6. Hierarchical clustering  
+
+```{r}
+data("USArrests")
+#a) Calculate distance of each vector to each, using uclidean method, and cluster the the States
+col.dist<-dist(USArrests)
+clustrd.states<-hclust(col.dist,method="complete")
+
+#b) 
+cutree(clustrd.states,3)
+plot(clustrd.states)
+#Executing cutree() gives us a list of the states with the cluster number associated to them
+
+#c)
+#?scale
+#scale(USArrests, center = TRUE, scale = TRUE)
+col.dist<-dist(scale(USArrests, center = TRUE, scale = TRUE))
+clustrd.states.scaled<-hclust(col.dist,method="complete")
+cutree(clustrd.states.scaled,3)
+plot(clustrd.states.scaled)
+
+#d) It divides the data into 4 to 5 clusters. My opinion is they should be scaled
+#as looking at the data, UrbanPop values are on a larger scaling than Rape and Murder respectively and the values in Assult are even larger. 
+
+```
+
+
+
+
+
+
+

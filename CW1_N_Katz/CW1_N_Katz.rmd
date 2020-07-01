@@ -1,0 +1,233 @@
+---
+title: "CW1_13128128_N_Katz.rmd"
+author: "NK"
+course: "BSc"
+date: "18 November 2018"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+1. Statistical learning methods
+
+a) inflexible method is better as there are enough data points and not many predictors and so the formula to describe f is simple as there aren't many coafficiants. 
+b) flexible learning method is better as there are too many predictors to account for
+c) flexible learning method is better as it's not a simple relationship i.e. has many coafficiants, many streight lines and so trying to apply a inflexible learning method might fit the traning data well but be not useful  for prediction. 
+d) a felxible method as the high variance in the epsilons tells you that this is probably a complax relations and f is highly non-linar. 
+
+2. Descriptive analysis
+a)
+```{r}
+OralExamResults<-c(4, 1, 4, 5, 3, 2, 3, 4, 3, 5, 2, 2, 4, 3, 5, 5, 1, 1, 1, 2)
+WrittenExamResults<-c(2, 3, 1, 4, 2, 5, 3, 1, 2, 1, 2, 2, 1, 1, 2, 3, 1, 2, 3, 4)
+ExamResults<-c(OralExamResults,WrittenExamResults)
+mean(OralExamResults)
+median(OralExamResults)
+
+getMode<-function(x){
+  uniqueResults<-unique(x)
+#broken up it is
+#uniquex - only unique numbers in vector
+#match(x, uniquex) - - how many times are each of the unique found in the vector of non-unique
+#tabulate(match(x, uniquex)) - place # times corresponding to the values in unique, into another vector
+#which.max(tabulate(match(x, uniquex))) - comparing unique with tabulate, find the unieqe that corresponds to the most in tabulate and that's the mode from your non-unique vector. 
+uniqueResults[which.max(tabulate(match(x, uniqueResults)))]
+}#taken from here https://stackoverflow.com/questions/2547402/is-there-a-built-in-function-for-finding-the-mode
+
+
+
+summaryExamResults <- c(mean(OralExamResults),median(OralExamResults),getMode(OralExamResults),var(OralExamResults),sd(OralExamResults),mean(WrittenExamResults),median(WrittenExamResults),getMode(WrittenExamResults),var(WrittenExamResults),sd(WrittenExamResults), mean(ExamResults),median(ExamResults),getMode(ExamResults),var(ExamResults),sd(ExamResults))
+
+  matrixSummaryExamResults<-matrix(seq(summaryExamResults),3,5,byrow=T,
+dimnames = list(
+c("OralExamResults", "WrittenExamResults", "OralAndWrittenExamResults"),
+c("mean", "median", "mode", "variance", "standardDeviation")
+))
+matrixSummaryExamResults
+
+```
+b) 
+```{r}
+cor(OralExamResults,WrittenExamResults)
+cov(OralExamResults,WrittenExamResults)
+```
+c)a weak negative correlation between the two as it's quite close to 0. Negative correlation, meaning that getting a low mark at 1 exam would indicate getting a better results at the other. Hence the covariance is negative, showing the above avarage of one variables are related to the lower than avarage of the other and vice versa. 
+
+d)This doesn't imply causation, especially when doing well in one should naturally mean they can also do well in the other. There maybe other variables at play, which cause the relation or the relation observed maybe rendom. In order to establish causation, ontrolled two group studies would need to be done. 
+
+3 Linear regression
+a)
+```{r}
+library(ISLR)
+attach(Auto)
+lm.fit<-lm(mpg~horsepower, data=Auto)
+summary(lm.fit)
+
+```
+I) t-value is large and p-value is small. We can conclude that B1!=0 and there is a significant a negative relationship between horsepower and miles per gallon; and that for each increase in horespower unit there is a decrease of 0.16 in miles used up per gallon. In this case the intercept is ignored as if the horsepower is 0, there are no mpg being used. 
+
+II) R squared after adjusting indicates that 60.5 percent of the variation we see in mpg is explained by the difference between engine horsepower. 
+
+III) The predicted mpg associated with a horsepower of 98 would be 24.5. We estimate (with 95% confidence) that our prediction for 98, would fall not less than 23.97 and not above 24.96 mpg (B1). 
+
+IV)
+```{r}
+predict(lm.fit,
+data.frame(horsepower=98),
+interval="confidence")
+```
+
+b)
+```{r}
+plot(mpg~horsepower, data=Auto)
+abline(lm.fit)
+```
+c)
+```{r}
+plot(horsepower,mpg,
+xlab="horsepower", ylab = "mpg",
+main = "Confidence intervals and prediction intervals",
+ylim=c(0,50)
+)
+abline(lm.fit)
+newHp <- data.frame(horsepower=seq(50,250,by=10))
+p_conf <- predict(lm.fit,newHp,interval="confidence")
+p_pred <- predict(lm.fit,newHp,interval="prediction")
+lines(newHp$horsepower,p_conf[,"upr"],col="red", type="b",pch="+")
+lines(newHp$horsepower,p_conf[,"lwr"],col="red", type="b",pch="+")
+lines(newHp$horsepower,p_pred[,"upr"],col="blue", type="b",pch="*")
+lines(newHp$horsepower,p_pred[,"lwr"],col="blue",type="b",pch="*")
+legend("bottomright",
+pch=c("+","*"),
+col=c("red","blue"),
+legend = c("confidence","prediction"))
+```
+5)
+```{r}
+library(MASS)
+attach(Boston)
+View(Boston)
+?Boston
+crim.1<-rep(0,506)
+y<-which(Boston$crim>median(Boston$crim))
+crim.1[y]<-1
+a<-glm(crim.1~nox,data=Boston,family="binomial")
+summary(a)
+a<-glm(crim.1~rad, data=Boston,family="binomial")
+summary(a)
+a<-glm(crim.1~ptratio,data=Boston,family="binomial")
+summary(a)
+a<-glm(crim.1~medv,data=Boston,family="binomial")
+summary(a)
+a<-glm(crim.1~tax,data=Boston,family="binomial")
+summary(a)
+a<-glm(crim.1~zn,data=Boston,family="binomial")
+summary(a)
+
+a<-glm(crim.1~nox+rad+ptratio+medv, data=Boston,family="binomial")
+summary(a)
+```
+These variables all seem to suggest a strong relationship with crime individually (nox being the most significant), with medv and zn implying a negative relationship, but combined, it seems that a high nitrogen oxide concentration, low accessibility to highwasy, teacher to pupil ration and median value of owner occupide homes in $1000s, together influence the most, a positive relation with crime, as it appears from the samll p value. 
+
+Interestingly, black on its own shows a slight negative relation which really is positive when realising that the the proportions in this data set are the results of the equation 1000(Bk - 0.63)^2 and so rearanging the formula means that where the proportion of black is now the heighest, would after rearnagment come out as 0 in the variable Bk.. However, having said that, when combining black with other significant variables, black does not matter much, suggesting that the reason black shows a relationship on its own is maybe due to that beign intself corralated to the other variables  that do imply a strong relationship with crime.  
+
+
+7)
+a), b), c) & d)
+```{r}
+library(boot)
+set.seed(500)
+y=rnorm(500)
+x=4-rnorm(500)
+y=x -(2*(x^2))+(3*(x^4))+rnorm(500)
+length(y)
+plot(y~x, main = "Scatter plot of x and y", xlab = "x", ylab= "y")
+
+
+
+set.seed(23)
+x_2<-x^2
+x_3<-x^3
+x_4<-x^4
+
+A<-data.frame(y,x,x_2,x_3,x_4)
+i<-glm(y~x)
+A<-data.frame(y,x)
+cv.erri <- cv.glm(A,i, K=10)
+cv.erri$delta
+
+ii<-glm(y~x+x_2)
+B<-data.frame(y,x,x_2)
+cv.errii <- cv.glm(B,ii, K=10)
+cv.errii$delta
+
+iii<-glm(y~x+x_2+x_3)
+C<-data.frame(y,x,x_2,x_3)
+cv.erriii <- cv.glm(C,iii, K=10)
+cv.erriii$delta
+
+iv<-glm(y~x+x_2+x_3+x_4)
+D<-data.frame(y,x,x_2,x_3,x_4)
+cv.erriv <- cv.glm(D,iv, K=10)
+cv.erriv$delta
+
+
+set.seed(46)
+x_2<-x^2
+x_3<-x^3
+x_4<-x^4
+
+A<-data.frame(y,x,x_2,x_3,x_4)
+i<-glm(y~x)
+A<-data.frame(y,x)
+cv.erri <- cv.glm(A,i, K=10)
+cv.erri$delta
+
+ii<-glm(y~x+x_2)
+B<-data.frame(y,x,x_2)
+cv.errii <- cv.glm(B,ii, K=10)
+cv.errii$delta
+
+iii<-glm(y~x+x_2+x_3)
+C<-data.frame(y,x,x_2,x_3)
+cv.erriii <- cv.glm(C,iii, K=10)
+cv.erriii$delta
+
+iv<-glm(y~x+x_2+x_3+x_4)
+D<-data.frame(y,x,x_2,x_3,x_4)
+cv.erriv <- cv.glm(D,iv, K=10)
+cv.erriv$delta
+
+```
+
+Comment to a): n is 500 and x is p. 
+
+Comment to b): The scatter plot demonstartes an exponential relationship between x and y. 
+
+Comment to d) The cv isn't the same because seed was changed. 
+
+Comment to e) Ex 5 is the smallest; yes it was expected becasue the random data was moduled based on 4th power component and so incorporating x^4 provides a much better fit for this data. 
+
+f)
+```{r}
+summary(i)
+cv.erri$delta
+
+summary(ii)
+cv.errii$delta
+
+summary(iii)
+cv.erriii$delta
+
+summary(iv)
+cv.erriv$delta
+```
+
+
+
+
